@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Валюты">
+<title>Конвертер валют</title>
+<style>
+:root{--bg:#0a0a0a;--card:#161616;--card2:#1f1f1f;--line:#2a2a2a;--tx:#f5f5f5;--mut:#8a8a8a;--or:#ff7a00;--or2:#ffb347;--glow:rgba(255,122,0,.35)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+html,body{margin:0;overscroll-behavior:none;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+html{overflow:hidden}
+body{position:relative;height:100vh;overflow:hidden;-webkit-user-select:none;user-select:none;padding:env(safe-area-inset-top) 0 0}
+.blob{position:fixed;width:340px;height:340px;border-radius:50%;filter:blur(90px);opacity:.28;z-index:0;pointer-events:none;background:var(--or);animation:float 14s ease-in-out infinite}
+.b1{top:-120px;right:-100px}.b2{bottom:-140px;left:-120px;background:#ff4d00;animation-delay:-7s}
+@keyframes float{50%{transform:translate(-40px,50px) scale(1.15)}}
+.app{position:relative;z-index:1;max-width:520px;height:100%;margin:0 auto;padding:18px 16px 0;display:flex;flex-direction:column;overflow:hidden}
+.app>header,.app>.status{flex:none}
+.rows-box{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;margin:0 -16px;padding:10px 16px 14px;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 18px),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 18px),transparent 100%)}
+.rows-box::-webkit-scrollbar{display:none}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;animation:down .6s both}
+.hbtns{display:flex;align-items:center;gap:8px}
+.done-btn{height:42px;padding:0 16px;border-radius:14px;border:0;background:linear-gradient(135deg,var(--or),#ff4d00);color:#fff;font-weight:700;font-size:14px;cursor:pointer;display:none}
+.done-btn:active{transform:scale(.94)}
+body.edit .done-btn{display:block}
+body.edit #gear{display:none}
+body.edit .fab-wrap{opacity:0;pointer-events:none}
+h1{font-size:26px;margin:0;font-weight:800;letter-spacing:-.5px}
+h1 span{background:linear-gradient(90deg,var(--or),var(--or2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.icon-btn{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--or);display:grid;place-items:center;cursor:pointer;transition:.2s}
+.icon-btn:active{transform:scale(.9)}
+.icon-btn svg{width:20px;height:20px}
+.icon-btn.spin svg{animation:spin .8s linear}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:13px;margin:4px 2px 18px;animation:down .6s .1s both}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--or);box-shadow:0 0 0 0 var(--glow);animation:pulse 1.8s infinite}
+.dot.off{background:#c0392b;animation:none}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(255,122,0,0)}100%{box-shadow:0 0 0 0 rgba(255,122,0,0)}}
+.bar{height:3px;background:var(--card);border-radius:3px;overflow:hidden;margin:-8px 0 16px}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--or),var(--or2));transform-origin:left;transition:transform 1s linear}
+@keyframes down{from{opacity:0;transform:translateY(-12px)}}
+@keyframes up{from{opacity:0;transform:translateY(18px) scale(.97)}}
+
+.row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px 12px 10px 14px;margin-bottom:10px;animation:up .45s both;transition:border-color .25s,box-shadow .25s,transform .25s, opacity .2s}
+.row.dragging{opacity:0.4;transform:scale(0.98);border-color:var(--or)}
+.drag-handle{width:26px;height:36px;display:none;touch-action:none;flex-direction:column;justify-content:center;gap:5px;cursor:grab;flex:none;opacity:0.6;transition:opacity .2s;align-items:stretch;padding:0 3px}
+body.edit .drag-handle{display:flex}
+body.edit .row input{pointer-events:none}
+.drag-handle:hover{opacity:0.8}
+.drag-handle span{display:block;height:2px;background:var(--mut);border-radius:2px}
+
+.row.active{border-color:var(--or);box-shadow:0 0 0 1px var(--or),0 8px 28px var(--glow);transform:scale(1.015)}
+.row.out{animation:out .3s forwards}
+@keyframes out{to{opacity:0;transform:translateX(60px);height:0;padding:0;margin:0;border:0}}
+.flag{width:34px;height:34px;border-radius:50%;flex:none;background:var(--card2) center/cover no-repeat;display:grid;place-items:center;font-weight:800;font-size:12px;color:var(--or);border:2px solid var(--line);overflow:hidden}
+.flag{position:relative}
+.flag .emo{font-size:20px;line-height:1;font-weight:400}
+.flag img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+.info{min-width:0;flex:none;width:96px}
+.code{font-weight:800;font-size:16px}
+.name{font-size:11.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row input{-webkit-user-select:text;user-select:text;flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--tx);font-size:21px;font-weight:700;text-align:right;font-family:inherit;letter-spacing:-0.5px}
+.row input::placeholder{color:#444}
+.row.active input{color:var(--or2)}
+.row input.flash{animation:flash .5s}
+@keyframes flash{30%{color:var(--or);text-shadow:0 0 14px var(--glow)}}
+.del{display:none;width:28px;height:28px;border:0;border-radius:50%;background:var(--card2);color:var(--mut);cursor:pointer;flex:none;font-size:16px;line-height:1;transition:.2s}
+.del{width:32px;height:32px}
+body.edit .del{display:block}
+@keyframes wob{0%,100%{transform:rotate(-.4deg)}50%{transform:rotate(.4deg)}}
+body.edit .row:not(.dragging){animation:wob .35s ease-in-out infinite}
+.del:active{background:var(--or);color:#000;transform:scale(.85)}
+.fab-wrap{flex:none;display:flex;justify-content:center;padding:10px 0 calc(14px + env(safe-area-inset-bottom));transition:opacity .25s}
+.fab{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;padding:15px 26px;border:0;border-radius:40px;background:linear-gradient(135deg,var(--or),#ff4d00);color:#fff;font-weight:700;font-size:16px;cursor:pointer;box-shadow:0 10px 30px var(--glow);transition:transform .2s}
+.fab:active{transform:scale(.94)}
+.hint{text-align:center;color:var(--mut);font-size:12.5px;margin-top:14px}
+.overlay{position:fixed;inset:0;touch-action:none;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:10;opacity:0;pointer-events:none;transition:.3s}
+.overlay.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:11;max-width:520px;margin:0 auto;height:78vh;height:78dvh;background:var(--card);border-radius:28px 28px 0 0;border-top:1px solid var(--or);transform:translateY(105%);transition:transform .4s cubic-bezier(.2,.9,.3,1);display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.sheet.show{transform:none}
+.sheet-head{touch-action:none;flex:none;cursor:grab}
+.grab{width:44px;height:5px;background:var(--line);border-radius:5px;margin:10px auto 6px}
+.sheet-top{display:flex;align-items:center;justify-content:space-between;margin:6px 12px 10px 18px}
+.sheet h2{margin:0;font-size:19px}
+.close{width:34px;height:34px;border:0;border-radius:50%;background:var(--card2);color:var(--tx);font-size:20px;line-height:1;cursor:pointer}
+.close:active{background:var(--or);color:#000}
+.search{margin:0 16px 10px;padding:13px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font-size:16px;outline:0;font-family:inherit}
+.search:focus{border-color:var(--or)}
+.list{overflow-y:auto;padding:0 10px 10px;flex:1;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+.item{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:14px;cursor:pointer;transition:background .15s}
+.item:active{background:var(--card2)}
+.item .flag{width:38px;height:38px}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block}.item .t span{font-size:12px;color:var(--mut)}
+.item .ck{color:var(--or);font-weight:800}
+.empty{text-align:center;color:var(--mut);padding:30px}
+.val{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-end}
+.row .val input{flex:none;width:100%}
+.sub{font-size:11px;color:var(--mut);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;min-height:13px;margin-top:1px}
+.sub .up{color:#3ddc84}.sub .dn{color:#ff5a5f}
+.flag,.info{cursor:pointer}
+body.edit .flag,body.edit .info{cursor:default}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--card2);border:1px solid var(--or);color:var(--tx);padding:10px 18px;border-radius:30px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:20;max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+#lang{font-size:13px;font-weight:800}
+.hint+.hint{margin-top:6px}
+.inst{position:fixed;left:12px;right:12px;max-width:496px;margin:0 auto;bottom:calc(84px + env(safe-area-inset-bottom));z-index:15;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--or);border-radius:20px;padding:12px 8px 12px 16px;box-shadow:0 12px 36px rgba(0,0,0,.6),0 0 0 1px var(--glow);transform:translateY(160%);opacity:0;pointer-events:none;transition:.4s cubic-bezier(.2,.9,.3,1)}
+.inst.show{transform:none;opacity:1;pointer-events:auto}
+.inst .it{flex:1;min-width:0;font-size:12.5px;color:var(--mut);line-height:1.4}
+.inst .it b{display:block;color:var(--tx);font-size:14.5px;margin-bottom:2px}
+.inst svg{width:15px;height:15px;vertical-align:-3px;color:var(--or)}
+.ib{border:0;border-radius:14px;background:linear-gradient(135deg,var(--or),#ff4d00);color:#fff;font-weight:700;font-size:14px;padding:11px 16px;cursor:pointer;flex:none}
+.ib:active{transform:scale(.94)}
+.ix{border:0;background:transparent;color:var(--mut);font-size:18px;width:34px;height:34px;cursor:pointer;flex:none}
+.status #stat{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.instpill{display:none;margin-left:auto;flex:none;border:1px solid var(--or);background:transparent;color:var(--or2);border-radius:14px;padding:5px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.instpill svg{width:13px;height:13px;vertical-align:-2px;margin-right:4px}
+.instpill:active{transform:scale(.94)}
+.hint:empty{display:none}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div>
+<div class="app">
+  <header>
+    <h1>Курс <span>Валют</span></h1>
+    <div class="hbtns">
+    <button class="done-btn" id="done">Завершить</button>
+    <button class="icon-btn" id="lang" aria-label="Language">RU</button>
+    <button class="icon-btn" id="gear" aria-label="Редактировать"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <button class="icon-btn" id="refresh" aria-label="Обновить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></button>
+    </div>
+  </header>
+  <div class="status"><span class="dot" id="dot"></span><span id="stat">Загрузка курсов…</span><button class="instpill" id="instBtn"></button></div>
+  
+  <div class="rows-box" id="rowsBox">
+    <div id="rows"></div>
+    <div class="hint" id="hint2"></div>
+    <div class="hint">Designed & Developed by Sunnat</div>
+  </div>
+  <div class="fab-wrap"><button class="fab" id="add"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить валюту</button></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="inst" id="inst"><div class="it"><b id="instT"></b><span id="instD"></span></div><button class="ib" id="instB"></button><button class="ix" id="instX" aria-label="Close">✕</button></div>
+<div class="overlay" id="ov"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-head" id="sheetHead">
+    <div class="grab"></div>
+    <div class="sheet-top"><h2>Все валюты</h2><button class="close" id="closeSheet" aria-label="Закрыть">✕</button></div>
+  </div>
+  <input class="search" id="q" placeholder="Поиск: USD, евро, dollar…" autocomplete="off">
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const UPDATE_MS=60000;
+const tfetch=async(u,ms=8000)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(u,{cache:'no-store',signal:c.signal})}finally{clearTimeout(t)}};
+const SRC=[
+  async()=>{const r=await tfetch('https://open.er-api.com/v6/latest/USD?t='+Date.now());const j=await r.json();if(j.result!=='success')throw 0;return j.rates},
+  async()=>{const r=await tfetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json?t='+Date.now());const j=await r.json();const o={};for(const k in j.usd)o[k.toUpperCase()]=j.usd[k];return o}
+];
+const CBU='https://cbu.uz/oz/arkhiv-kursov-valyut/json/';
+const CBU_URLS=[CBU,'https://api.allorigins.win/raw?url='+encodeURIComponent(CBU),'https://corsproxy.io/?'+encodeURIComponent(CBU)];
+let cbuOK=false,cbuDate='',fresh=false;
+/* ЦБ запрашивается параллельно с мировыми курсами; прокси подключаются с задержкой, только если прямой запрос не успел */
+async function getCbu(){
+  let done=false;
+  const one=async(u,d)=>{
+    if(d)await new Promise(r=>setTimeout(r,d));
+    if(done)throw 0;
+    const res=await tfetch(u,6000);if(!res.ok)throw 0;
+    const arr=await res.json();if(!Array.isArray(arr)||!arr.length)throw 0;
+    done=true;return arr;
+  };
+  try{return await Promise.any(CBU_URLS.map((u,i)=>one(u,i*1500)))}catch(e){return null}
+}
+/* Официальный курс ЦБ Узбекистана накладывается поверх мировых курсов (UZS за 1 единицу валюты) */
+function applyCbu(r,arr){
+  const per={};let date='';
+  for(const x of arr){const v=parseFloat(String(x.Rate).replace(',','.')),n=parseFloat(x.Nominal)||1;if(x.Ccy&&v>0){per[x.Ccy]=v/n;if(x.Date)date=x.Date}}
+  if(!per.USD){cbuOK=false;return}
+  r.UZS=per.USD;
+  for(const c in per){if(c!=='USD'&&c!=='UZS')r[c]=per.USD/per[c]}
+  cbuOK=true;cbuDate=date;
+}
+const FLAG_FIX={EUR:'eu',XAF:'cm',XOF:'sn',XCD:'ag',XPF:'pf',ANG:'cw',CNH:'cn',GGP:'gg',IMP:'im',JEP:'je'};
+const NOFLAG=/^(XAU|XAG|XPT|XPD|XDR|BTC|ETH)$/;
+let dn=null;
+const UZN={USD:'AQSh dollari',EUR:'Yevro',RUB:'Rossiya rubli',UZS:'O‘zbekiston so‘mi',KZT:'Qozog‘iston tengesi',GBP:'Funt sterling',CNY:'Xitoy yuani',TRY:'Turk lirasi',AED:'BAA dirhami',KRW:'Janubiy Koreya voni',JPY:'Yapon iyenasi',CHF:'Shveytsariya franki',KGS:'Qirg‘iz somi',TJS:'Tojik somonisi',UAH:'Ukraina grivnasi',PLN:'Polsha zlotiysi',INR:'Hind rupiyasi',AZN:'Ozarbayjon manati',AFN:'Afg‘on afg‘oniy',TMT:'Turkman manati',GEL:'Gruziya larisi',AMD:'Arman drami',BYN:'Belarus rubli',CAD:'Kanada dollari',AUD:'Avstraliya dollari',SAR:'Saudiya riyoli',EGP:'Misr funti',ILS:'Isroil shekeli',CZK:'Chexiya kronasi',SEK:'Shvetsiya kronasi',NOK:'Norvegiya kronasi',DKK:'Daniya kronasi',MYR:'Malayziya ringgiti',SGD:'Singapur dollari',THB:'Tailand bati',IDR:'Indoneziya rupiyasi',VND:'Vyetnam dongi',BRL:'Braziliya reali',MXN:'Meksika pesosi',HKD:'Gonkong dollari',PKR:'Pokiston rupiyasi',IRR:'Eron riyoli',IQD:'Iroq dinori',KWD:'Kuvayt dinori',NZD:'Yangi Zelandiya dollari',ZAR:'Janubiy Afrika randi',HUF:'Vengriya forinti',RON:'Ruminiya leyi',BGN:'Bolgariya levi',MDL:'Moldova leyi',QAR:'Qatar riyoli',OMR:'Ummon riyoli',BHD:'Bahrayn dinori',JOD:'Iordaniya dinori',LBP:'Livan funti',BDT:'Bangladesh takasi',LKR:'Shri-Lanka rupiyasi',NPR:'Nepal rupiyasi',MNT:'Mo‘g‘uliston tugriki',PHP:'Filippin pesosi',TWD:'Tayvan dollari',XAU:'Oltin',XAG:'Kumush'};
+/* названия: для UZ — свой словарь, для остальных валют английские; для RU/EN — Intl */
+const cname=c=>{if(lang==='uz'&&UZN[c])return UZN[c];try{return dn?dn.of(c):c}catch(e){return c}};
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+
+let rates=load('rates',{}), updated=load('updated',0), snap=load('snap',null);
+let list=load('list',['USD','EUR','RUB','UZS']);
+let active=load('active',list[0]), amount=load('amount',1), countdown=60, busy=false;
+if(!list.includes(active))active=list[0];
+
+/* Языки: RU / UZ / EN */
+const I18N={
+ru:{title:'Конвертер валют',h1:'Курс <span>Валют</span>',load:'Загрузка курсов…',online:'Онлайн',off:'Нет сети · курсы от',none:'Нет сети и нет сохранённых курсов',cbu:'ЦБ Узбекистана',add:'Добавить валюту',done:'Завершить',all:'Все валюты',search:'Поиск: USD, евро, dollar…',empty:'Ничего не найдено',copied:'Скопировано',hint:'Нажмите на валюту, чтобы скопировать сумму',del:'Удалить',edit:'Редактировать',refresh:'Обновить',close:'Закрыть',inst_t:'Установите на экран «Домой»',inst_d:'Работает как приложение, даже без интернета',inst_b:'Установить',inst_ios:'Нажмите {s} «Поделиться», затем «На экран Домой»',inst_safari:'Откройте страницу в Safari, затем «Поделиться» → «На экран Домой»'},
+uz:{title:'Valyuta konvertori',h1:'Valyuta <span>kurslari</span>',load:'Kurslar yuklanmoqda…',online:'Onlayn',off:'Aloqa yo‘q · kurslar:',none:'Aloqa yo‘q va saqlangan kurslar yo‘q',cbu:'O‘zbekiston MB',add:'Valyuta qo‘shish',done:'Tayyor',all:'Barcha valyutalar',search:'Qidirish: USD, yevro, dollar…',empty:'Hech narsa topilmadi',copied:'Nusxalandi',hint:'Summani nusxalash uchun valyutani bosing',del:'O‘chirish',edit:'Tahrirlash',refresh:'Yangilash',close:'Yopish',inst_t:'Bosh ekranga o‘rnating',inst_d:'Ilova kabi ishlaydi, internetsiz ham',inst_b:'O‘rnatish',inst_ios:'{s} «Ulashish» tugmasini bosing, so‘ng «Bosh ekranga qo‘shish»',inst_safari:'Sahifani Safari’da oching, so‘ng «Ulashish» → «Bosh ekranga qo‘shish»'},
+en:{title:'Currency converter',h1:'Currency <span>Rates</span>',load:'Loading rates…',online:'Online',off:'Offline · rates from',none:'Offline and no saved rates',cbu:'Central Bank of Uzbekistan',add:'Add currency',done:'Done',all:'All currencies',search:'Search: USD, euro, dollar…',empty:'Nothing found',copied:'Copied',hint:'Tap a currency to copy the amount',del:'Delete',edit:'Edit',refresh:'Refresh',close:'Close',inst_t:'Install on your home screen',inst_d:'Works like an app, even offline',inst_b:'Install',inst_ios:'Tap {s} Share, then “Add to Home Screen”',inst_safari:'Open this page in Safari, then tap Share → “Add to Home Screen”'}
+};
+const nl=navigator.language||'ru';
+let lang=load('lang',/^uz/i.test(nl)?'uz':/^en/i.test(nl)?'en':'ru');
+if(!I18N[lang])lang='ru';
+const L=k=>I18N[lang][k]||I18N.ru[k];
+function applyLang(){
+  document.documentElement.lang=lang;document.title=L('title');
+  try{dn=new Intl.DisplayNames([lang==='uz'?'en':lang],{type:'currency'})}catch(e){dn=null}
+  $('h1').innerHTML=L('h1');
+  $('#add').lastChild.textContent=L('add');
+  $('#done').textContent=L('done');$('#sheet h2').textContent=L('all');
+  $('#q').placeholder=L('search');$('#hint2').textContent=load('copied',0)?'':L('hint');
+  $('#lang').textContent=lang.toUpperCase();
+  $('#gear').setAttribute('aria-label',L('edit'));$('#refresh').setAttribute('aria-label',L('refresh'));$('#closeSheet').setAttribute('aria-label',L('close'));
+  instText();stat();
+}
+
+function flagEl(c){
+  const d=document.createElement('div');d.className='flag';
+  if(NOFLAG.test(c)){d.textContent=c.slice(0,3);return d}
+  const cc=(FLAG_FIX[c]||c.slice(0,2)).toLowerCase();
+  const emo=[...cc.toUpperCase()].map(ch=>String.fromCodePoint(127397+ch.charCodeAt(0))).join('');
+  const em=document.createElement('span');em.className='emo';em.textContent=emo;d.appendChild(em);
+  const urls=[
+    'https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/flags/1x1/'+cc+'.svg',
+    'https://flagcdn.com/w80/'+cc+'.png',
+    'https://flagsapi.com/'+cc.toUpperCase()+'/flat/64.png'
+  ];
+  let n=0;
+  const img=new Image();img.alt='';img.loading='lazy';img.decoding='async';
+  img.onload=()=>{img.style.opacity=1};
+  img.onerror=()=>{if(++n<urls.length)img.src=urls[n];else img.remove()};
+  img.src=urls[0];
+  d.appendChild(img);return d;
+}
+function convert(v,from,to){return v/rates[from]*rates[to]}
+function fmt(n){
+  if(!isFinite(n))return '';
+  const a=Math.abs(n);
+  if(a===0)return '0';
+  let o;
+  if(a>=1)o={maximumFractionDigits:3};
+  else o={maximumSignificantDigits:4};
+  return new Intl.NumberFormat('ru-RU',o).format(n);
+}
+function parse(s){return parseFloat(String(s).replace(/\s/g,'').replace(',','.'))}
+
+function render(){
+  const box=$('#rows');box.innerHTML='';
+  list.forEach((c,i)=>{
+    const r=document.createElement('div');r.className='row'+(c===active?' active':'');r.dataset.c=c;
+    r.style.animationDelay=i*60+'ms';
+    
+    // Drag handle
+    const handle=document.createElement('div');handle.className='drag-handle';
+    handle.innerHTML='<span></span><span></span><span></span>';
+    r.appendChild(handle);
+
+    const fl=flagEl(c);fl.onclick=()=>copyVal(c);r.appendChild(fl);
+    const info=document.createElement('div');info.className='info';
+    info.innerHTML='<div class="code">'+c+'</div><div class="name">'+cname(c)+'</div>';
+    info.onclick=()=>copyVal(c);r.appendChild(info);
+    const inp=document.createElement('input');inp.inputMode='decimal';inp.placeholder='0';inp.autocomplete='off';
+    inp.addEventListener('focus',()=>{const v=parse(inp.value);if(!isNaN(v))amount=v;active=c;save('active',c);if(!isNaN(amount))save('amount',amount);inp.select();document.querySelectorAll('.row').forEach(x=>x.classList.toggle('active',x===r));fill(false)});
+    inp.addEventListener('input',()=>{
+      let raw = inp.value.replace(/[^\d.,\s]/g,'');
+      let clean = raw.replace(/\s/g,'');
+      let parts = clean.split(/[,.]/);
+      let intPart = parts[0].replace(/\D/g,'');
+      let formatted = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g,' ') : '';
+      if (parts.length > 1) {
+        let decPart = parts.slice(1).join('').replace(/\D/g,'');
+        let sep = clean.includes(',') ? ',' : '.';
+        formatted += sep + decPart;
+      } else if (raw.endsWith(',') || raw.endsWith('.')) {
+        let sep = raw.endsWith(',') ? ',' : '.';
+        formatted += sep;
+      }
+      inp.value = formatted;
+      amount=parse(inp.value);active=c;if(!isNaN(amount))save('amount',amount);fill(true);
+    });
+    inp.addEventListener('blur',()=>{
+      if(!isNaN(amount)) inp.value = fmt(amount);
+    });
+    const val=document.createElement('div');val.className='val';val.appendChild(inp);const sub=document.createElement('div');sub.className='sub';val.appendChild(sub);r.appendChild(val);
+    const del=document.createElement('button');del.className='del';del.textContent='×';del.setAttribute('aria-label',L('del'));
+    del.onclick=()=>{
+      if(list.length<=2)return;
+      r.classList.add('out');
+      setTimeout(()=>{list=list.filter(x=>x!==c);if(active===c)active=list[0];save('list',list);render()},300);
+    };
+    r.appendChild(del);
+    box.appendChild(r);
+  });
+  initDragAndDrop();
+  fill(false);
+}
+
+/* Drag and Drop Reordering (только в режиме редактирования) */
+function initDragAndDrop(){
+  const box=$('#rows'),scroller=$('#rowsBox');
+  box.querySelectorAll('.drag-handle').forEach(handle=>{
+    const row=handle.closest('.row');
+    handle.addEventListener('pointerdown',e=>{
+      if(!document.body.classList.contains('edit'))return;
+      e.preventDefault();
+      try{handle.setPointerCapture(e.pointerId)}catch(_){}
+      const rect=row.getBoundingClientRect();
+      const offY=e.clientY-rect.top;
+      const placeholder=document.createElement('div');
+      placeholder.style.cssText='height:'+rect.height+'px;border:2px dashed var(--or);border-radius:20px;margin-bottom:10px;background:rgba(255,122,0,0.05)';
+      row.parentNode.insertBefore(placeholder,row.nextSibling);
+      row.classList.add('dragging');
+      row.style.cssText='position:fixed;z-index:1000;width:'+rect.width+'px;left:'+rect.left+'px;top:'+rect.top+'px;margin:0;animation:none;pointer-events:none';
+      let y=e.clientY,raf=0;
+      const place=()=>{
+        row.style.top=(y-offY)+'px';
+        const sibs=[...box.querySelectorAll('.row:not(.dragging)')];
+        const next=sibs.find(sb=>{const r=sb.getBoundingClientRect();return y<r.top+r.height/2});
+        if(next){if(placeholder.nextSibling!==next)box.insertBefore(placeholder,next)}
+        else if(box.lastElementChild!==placeholder)box.appendChild(placeholder);
+      };
+      const loop=()=>{
+        const sr=scroller.getBoundingClientRect(),z=60;
+        if(y<sr.top+z)scroller.scrollTop-=Math.ceil((sr.top+z-y)/5);
+        else if(y>sr.bottom-z)scroller.scrollTop+=Math.ceil((y-(sr.bottom-z))/5);
+        place();raf=requestAnimationFrame(loop);
+      };
+      raf=requestAnimationFrame(loop);
+      const move=ev=>{y=ev.clientY};
+      const end=()=>{
+        cancelAnimationFrame(raf);
+        handle.removeEventListener('pointermove',move);
+        handle.removeEventListener('pointerup',end);
+        handle.removeEventListener('pointercancel',end);
+        row.classList.remove('dragging');row.style.cssText='';
+        placeholder.parentNode.insertBefore(row,placeholder);placeholder.remove();
+        list=[...box.querySelectorAll('.row')].map(r=>r.dataset.c);
+        save('list',list);
+      };
+      handle.addEventListener('pointermove',move);
+      handle.addEventListener('pointerup',end);
+      handle.addEventListener('pointercancel',end);
+    });
+  });
+}
+
+/* Режим редактирования */
+function setEdit(on){
+  document.body.classList.toggle('edit',on);
+  if(on)document.activeElement&&document.activeElement.blur();
+}
+$('#gear').onclick=()=>setEdit(true);
+$('#done').onclick=()=>setEdit(false);
+
+const TOP=['UZS','USD','EUR','RUB','KZT','GBP','CNY','TRY','AED','KRW','JPY','CHF','KGS','TJS','UAH','PLN','INR'];
+const topSort=(a,b)=>{const x=TOP.indexOf(a),y=TOP.indexOf(b);return (x<0?99:x)-(y<0?99:y)||(a<b?-1:a>b?1:0)};
+/* подпись под суммой: курс пары и изменение с прошлого дня */
+function subHtml(c){
+  if(c===active||!rates[c]||!rates[active])return '';
+  const now=convert(1,active,c);
+  let h='1 '+active+' = '+fmt(now)+' '+c;
+  if(snap&&snap.rates&&snap.rates[c]&&snap.rates[active]){
+    const p=(now/(snap.rates[c]/snap.rates[active])-1)*100;
+    if(isFinite(p)&&Math.abs(p)>=0.01)h+=' <span class="'+(p>0?'up':'dn')+'">'+(p>0?'▲':'▼')+Math.abs(p).toFixed(2)+'%</span>';
+  }
+  return h;
+}
+/* копирование суммы по нажатию на флаг / код валюты */
+let tt;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1400)}
+async function copyVal(c){
+  if(document.body.classList.contains('edit')||!rates[c]||!rates[active]||isNaN(amount))return;
+  const n=c===active?amount:convert(amount,active,c);
+  const t=String(Number(n.toPrecision(12)));
+  try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(_){}a.remove()}
+  toast(L('copied')+': '+t);
+  save('copied',1);$('#hint2').textContent='';
+}
+function fill(flash){
+  document.querySelectorAll('.row').forEach(r=>{
+    const c=r.dataset.c,inp=r.querySelector('input'),sub=r.querySelector('.sub');
+    if(sub)sub.innerHTML=subHtml(c);
+    if(c===active&&document.activeElement===inp)return;
+    if(!rates[c]||!rates[active]||isNaN(amount)){inp.value='';return}
+    const nv=fmt(c===active?amount:convert(amount,active,c));
+    if(inp.value!==nv){inp.value=nv;if(flash){inp.classList.remove('flash');void inp.offsetWidth;inp.classList.add('flash')}}
+  });
+}
+
+function commit(r){
+  const day=new Date().toISOString().slice(0,10);
+  if(!snap)snap={day,rates:{...r}};
+  else if(snap.day!==day&&Object.keys(rates).length)snap={day,rates:{...rates}};
+  save('snap',snap);
+  rates=r;updated=Date.now();fresh=true;save('rates',rates);save('updated',updated);
+  $('#dot').classList.remove('off');countdown=60;stat();
+  if(!document.querySelector('.row'))render();else fill(true);
+  if($('#sheet').classList.contains('show')){const st=$('#list').scrollTop;drawList();$('#list').scrollTop=st}
+}
+async function update(){
+  if(busy)return;busy=true;
+  const btn=$('#refresh');btn.classList.remove('spin');void btn.offsetWidth;btn.classList.add('spin');
+  try{
+    const cbuP=getCbu();
+    let r=null;
+    for(const s of SRC){try{const x=await s();if(x&&x.USD){r=x;break}}catch(e){}}
+    if(r){
+      commit(r);                                   /* сразу показываем мировые курсы */
+      const arr=await cbuP;
+      if(arr){applyCbu(r,arr);commit(r)}else{cbuOK=false;stat()}
+    }else{
+      $('#dot').classList.add('off');stat();
+      if(!document.querySelector('.row'))render();
+    }
+  }finally{busy=false}
+}
+function stat(){
+  let t;
+  if($('#dot').classList.contains('off'))t=updated?L('off')+' '+new Date(updated).toLocaleTimeString(lang==='en'?'en-GB':'ru-RU'):L('none');
+  else if(!fresh)t=L('load');
+  else t=L('online')+(cbuOK?' · '+L('cbu')+(cbuDate?' · '+cbuDate:''):'');
+  $('#stat').textContent=t;
+}
+setInterval(()=>{
+  countdown--;
+  if(countdown<=0){countdown=60;update()}
+},1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-updated>UPDATE_MS)update()});
+$('#refresh').onclick=()=>update(true);
+
+/* добавление валют */
+function drawList(){
+  const q=$('#q').value.trim().toLowerCase(),box=$('#list');box.innerHTML='';
+  const codes=Object.keys(rates).sort(topSort).filter(c=>!q||c.toLowerCase().includes(q)||cname(c).toLowerCase().includes(q));
+  if(!codes.length){box.innerHTML='<div class="empty">'+L('empty')+'</div>';return}
+  const fr=document.createDocumentFragment();
+  codes.forEach(c=>{
+    const it=document.createElement('div');it.className='item';
+    it.appendChild(flagEl(c));
+    const t=document.createElement('div');t.className='t';t.innerHTML='<b>'+c+'</b><span>'+cname(c)+'</span>';
+    it.appendChild(t);
+    const has=list.includes(c);
+    if(has){const k=document.createElement('span');k.className='ck';k.textContent='✓';it.appendChild(k)}
+    it.onclick=()=>{
+      if(has){
+        if(list.length>2){list=list.filter(x=>x!==c);if(active===c)active=list[0]}
+      } else {
+        list.push(c);
+      }
+      save('list',list);render();closeSheet();
+    };
+    fr.appendChild(it);
+  });
+  box.appendChild(fr);
+}
+function openSheet(){$('#ov').classList.add('show');$('#sheet').classList.add('show');$('#sheet').style.transform='';$('#q').value='';drawList();$('#list').scrollTop=0}
+function closeSheet(){$('#ov').classList.remove('show');$('#sheet').classList.remove('show');$('#sheet').style.transform='';$('#sheet').style.transition='';$('#q').blur()}
+$('#lang').onclick=()=>{lang=lang==='ru'?'uz':lang==='uz'?'en':'ru';save('lang',lang);applyLang();render();if($('#sheet').classList.contains('show'))drawList()};
+$('#add').onclick=openSheet;$('#ov').onclick=closeSheet;$('#closeSheet').onclick=closeSheet;$('#q').oninput=drawList;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+
+/* Свайп вниз за шапку шторки */
+const sheetEl=$('#sheet'),headEl=$('#sheetHead');
+let sY=0,sD=0,sDrag=false;
+headEl.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.close'))return;
+  sY=e.clientY;sD=0;sDrag=true;sheetEl.style.transition='none';
+  try{headEl.setPointerCapture(e.pointerId)}catch(_){}
+});
+headEl.addEventListener('pointermove',e=>{
+  if(!sDrag)return;
+  sD=Math.max(0,e.clientY-sY);
+  sheetEl.style.transform='translateY('+sD+'px)';
+});
+const sEnd=()=>{
+  if(!sDrag)return;sDrag=false;sheetEl.style.transition='';
+  if(sD>100)closeSheet();else sheetEl.style.transform='';
+  sD=0;
+};
+headEl.addEventListener('pointerup',sEnd);
+headEl.addEventListener('pointercancel',sEnd);
+
+/* установка на главный экран: Android/Chrome — кнопка, iPhone — подсказка с иконкой «Поделиться» */
+let deferred=null;
+const UA=navigator.userAgent;
+const isIOS=/iPhone|iPad|iPod/.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isStandalone=()=>navigator.standalone||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+const DL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>';
+const SHARE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+function instText(){
+  if(!$('#inst'))return;
+  $('#instT').textContent=L('inst_t');
+  $('#instD').innerHTML=deferred?L('inst_d'):(/Safari\//.test(UA)?L('inst_ios').replace('{s}',SHARE):L('inst_safari'));
+  $('#instB').textContent=L('inst_b');$('#instBtn').innerHTML=DL+L('inst_b');$('#instB').style.display=deferred?'':'none';
+}
+function showInst(){
+  if(isStandalone()||Date.now()-load('instX',0)<6048e5||(!deferred&&!isIOS))return;
+  instText();$('#inst').classList.add('show');
+}
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;instText();refreshInstBtn();setTimeout(showInst,2500)});
+addEventListener('appinstalled',()=>{$('#inst').classList.remove('show');deferred=null;refreshInstBtn()});
+if(isIOS)setTimeout(showInst,2500);
+$('#instB').onclick=async()=>{if(!deferred)return;deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;$('#inst').classList.remove('show');refreshInstBtn()};
+function refreshInstBtn(){$('#instBtn').style.display=(!isStandalone()&&(deferred||isIOS))?'block':'none'}
+$('#instBtn').onclick=()=>{if(deferred)$('#instB').onclick();else{instText();$('#inst').classList.add('show')}};
+$('#instX').onclick=()=>{save('instX',Date.now());$('#inst').classList.remove('show')};
+
+refreshInstBtn();applyLang();render();update();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
